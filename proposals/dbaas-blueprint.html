@@ -1,0 +1,382 @@
+<title>Self-Hosted DBaaS Blueprint</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap">
+<style>
+/* Layout concept: engineering design doc. Sticky contents rail on wide screens, single reading column, wide tables and diagrams scroll inside their own frames. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --fg:#16202b; --muted:#566272; --line:#d9dee5;
+  --accent:#1d5fd1; --accent-soft:#e6eefb; --good:#17794d; --warn:#9a5b00; --bad:#b3261e;
+  --code-bg:#eef1f5;
+  --font-body:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f151c; --surface:#161e28; --fg:#e4e9ef; --muted:#9aa6b5; --line:#2a3542;
+    --accent:#6ea2ff; --accent-soft:#1a2740; --good:#4cc28a; --warn:#e0a24a; --bad:#ff8a80;
+    --code-bg:#1b2531; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f151c; --surface:#161e28; --fg:#e4e9ef; --muted:#9aa6b5; --line:#2a3542;
+  --accent:#6ea2ff; --accent-soft:#1a2740; --good:#4cc28a; --warn:#e0a24a; --bad:#ff8a80;
+  --code-bg:#1b2531; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));}
+.wrap{max-width:1180px;margin:0 auto;padding-block:32px 72px;display:grid;grid-template-columns:230px minmax(0,1fr);gap:48px}
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:14px}
+nav.toc p{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+nav.toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
+nav.toc a{display:block;padding:5px 10px;border-left:2px solid var(--line);color:var(--muted);text-decoration:none}
+nav.toc a:hover{color:var(--fg);border-left-color:var(--accent)}
+main{min-width:0;max-width:760px}
+header.top{margin-bottom:40px}
+.kicker{font-family:var(--font-mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+h1{font-size:clamp(32px,5vw,46px);line-height:1.08;margin:10px 0 16px;letter-spacing:-.02em;text-wrap:balance}
+.lede{font-size:18px;color:var(--muted);margin:0}
+h2{font-size:26px;line-height:1.2;margin:56px 0 12px;letter-spacing:-.01em;text-wrap:balance;scroll-margin-top:24px}
+h3{font-size:18px;margin:28px 0 8px;text-wrap:balance}
+p{margin:0 0 14px}
+ul,ol.plain{margin:0 0 14px;padding-left:22px}
+li{margin-bottom:6px}
+a{color:var(--accent)}
+code{font-family:var(--font-mono);font-size:.88em;background:var(--code-bg);padding:1px 5px;border-radius:4px}
+.callout{background:var(--accent-soft);border-left:3px solid var(--accent);padding:14px 18px;margin:18px 0;border-radius:0 6px 6px 0}
+.callout p:last-child{margin:0}
+.callout strong:first-child{display:block;margin-bottom:2px}
+.scroll{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:640px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);background:var(--code-bg);font-weight:600}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600;min-width:150px}
+pre{margin:0;padding:16px 18px;overflow-x:auto;font-family:var(--font-mono);font-size:13px;line-height:1.55;background:var(--code-bg);border-radius:8px;border:1px solid var(--line)}
+pre code{background:none;padding:0;font-size:inherit}
+figure{margin:20px 0;padding:0}
+figure .scroll{padding:14px}
+figcaption{font-size:14px;color:var(--muted);margin-top:8px}
+svg{display:block;max-width:100%;height:auto;min-width:640px}
+svg text{font-family:var(--font-body);fill:currentColor}
+.badge{display:inline-block;font-family:var(--font-mono);font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid currentColor;white-space:nowrap;vertical-align:1px}
+.b-doc{color:var(--good)} .b-sec{color:var(--warn)} .b-inf{color:var(--accent)} .b-ver{color:var(--bad)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:16px 0}
+.cols>div{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px 18px;min-width:0}
+.cols h3{margin-top:0}
+.bar{display:flex;gap:3px;margin:6px 0 14px}
+.bar span{height:22px;border-radius:3px;background:var(--accent);flex:0 0 auto}
+.bar.wave span{background:var(--good)}
+.barlabel{font-size:13px;color:var(--muted)}
+footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);font-size:14px;color:var(--muted)}
+footer li{margin-bottom:4px;overflow-wrap:anywhere}
+@media (max-width:900px){
+  .wrap{grid-template-columns:minmax(0,1fr);gap:24px}
+  nav.toc{position:static}
+  nav.toc ol{flex-direction:row;flex-wrap:wrap;gap:4px 14px}
+  nav.toc a{border-left:0;padding:2px 0;text-decoration:underline}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <p>Contents</p>
+  <ol>
+    <li><a href="#summary">Summary</a></li>
+    <li><a href="#hyperscalers">How hyperscalers do it</a></li>
+    <li><a href="#principles">Design principles</a></li>
+    <li><a href="#constructs">Foundational constructs</a></li>
+    <li><a href="#architecture">Reference architecture</a></li>
+    <li><a href="#pack">The engine pack</a></li>
+    <li><a href="#engines">Aerospike and FoundationDB</a></li>
+    <li><a href="#patching">Patching, redesigned</a></li>
+    <li><a href="#substrate">VM or Kubernetes</a></li>
+    <li><a href="#roadmap">Build order</a></li>
+    <li><a href="#risks">Risks and unknowns</a></li>
+    <li><a href="#sources">Sources</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <div class="kicker">Design proposal</div>
+  <h1>A plugin-based database management service for self-hosted fleets</h1>
+  <p class="lede">An engine-agnostic control plane that gives Aerospike, FoundationDB, and later engines a managed-service experience on VMs we own, with each engine added as a declarative pack instead of new platform code.</p>
+</header>
+
+<h2 id="summary">Summary</h2>
+<p>Managed database services are not built from configuration management plus IaC. They are built from a <strong>control plane</strong> that holds the desired state of every database, <strong>durable workflows</strong> that carry out long operations, <strong>health-gated rollouts</strong> that respect each engine's failure rules, and <strong>images and agents</strong> on the nodes. Ansible and Pulumi are good at the first provisioning of a substrate. They are weak at running a fleet, because they hold no live state, have no notion of a cluster's health, and execute from a person's laptop or a CI job.</p>
+<p>The proposal has four parts:</p>
+<ol class="plain">
+  <li><strong>A small, engine-agnostic core</strong> with eleven constructs: resource model, spec and status store, reconciler, workflow engine, rollout engine, health signals, remediation, backup and DR, fleet inventory, policy and audit, and a self-service API.</li>
+  <li><strong>An engine pack</strong> as the plugin unit. About 80% of a pack is declarative (schema, topology, probes, operation graphs, alert mappings, compatibility matrix). The remaining 20% is small, sandboxed adapter code behind a fixed contract.</li>
+  <li><strong>Immutable images and node agents</strong> in place of in-place Ansible runs, with rack-by-rack or zone-by-zone waves instead of node-by-node serial patching.</li>
+  <li><strong>A build order</strong> that proves the abstraction by shipping Aerospike first, FoundationDB second, and only then opening the pack contract to others.</li>
+</ol>
+<div class="callout"><p><strong>The biggest single lever on your patching problem</strong></p><p>Serial patching of a 25-node cluster is 25 sequential units of work. If the cluster is rack-aware with enough racks, the same cluster can be patched in as many waves as it has racks, because each rack can go down together without losing a copy of the data. That is a policy change in the rollout engine, not new technology, and it is the first thing the platform should encode.</p></div>
+
+<h2 id="hyperscalers">How hyperscalers run managed databases</h2>
+<p>You asked whether Azure and AWS run Ansible, or hold state in Terraform or Pulumi. Their internals are not public in detail, so I separate what is documented from what is inferred. I searched specifically for this and found little first-party material on host-level mechanics.</p>
+
+<div class="scroll"><table>
+<thead><tr><th>Question</th><th>Answer</th><th>Evidence</th></tr></thead>
+<tbody>
+<tr><td>Is there a control plane and a data plane?</td><td>Yes. AWS defines the control plane as the part that handles changes to resources and propagates them, and the data plane as what resources do day to day. Control planes have more moving parts and fail more often, while data planes carry the traffic customers care about.</td><td><span class="badge b-doc">Documented</span></td></tr>
+<tr><td>What happens when the control plane fails?</td><td>Data planes are designed to be <em>statically stable</em>: they keep working on last known state, and recovery should not depend on control plane calls. This is why a database keeps serving while the console is down.</td><td><span class="badge b-doc">Documented</span></td></tr>
+<tr><td>How is blast radius limited?</td><td>Cells. Each cell is a self-contained slice of the service. The control plane provisions cells and tells a router where to send traffic. A bad deployment touches one cell first.</td><td><span class="badge b-doc">Documented</span></td></tr>
+<tr><td>How are minor upgrades sequenced?</td><td>For RDS Multi-AZ DB clusters, AWS upgrades readers one at a time, switches one reader to become the writer, then upgrades the old writer. AWS states downtime is about 35 seconds. RDS Blue/Green builds a full copy (green), keeps it in sync, and switches over, typically in under a minute.</td><td><span class="badge b-doc">Documented</span></td></tr>
+<tr><td>How does Azure SQL structure it?</td><td>An API and logic layer is separated from the SQL instances. Each database lives in a replica set on Service Fabric, a primary with two secondaries on separate machines. Service Fabric rolls out upgrades in waves with health policies and rolls back when they fail.</td><td><span class="badge b-sec">Secondary sources</span></td></tr>
+<tr><td>Do they run Ansible?</td><td>I found no public evidence either way. The pattern points elsewhere: proprietary orchestration, pre-built host images, and an agent on each host. Configuration drift is avoided by replacing hosts rather than mutating them.</td><td><span class="badge b-inf">Inference</span></td></tr>
+<tr><td>Is fleet state held in Terraform or Pulumi?</td><td>Very unlikely. Terraform and Pulumi state files describe infrastructure someone owns and applies. CloudFormation and ARM or Bicep are customer-facing front ends that call the service API. The service's own state for millions of databases lives in its own metadata stores, with workflow state tracked durably per operation.</td><td><span class="badge b-inf">Inference</span></td></tr>
+</tbody></table></div>
+
+<h3>What to take from them</h3>
+<ul>
+  <li><strong>State belongs in the platform, not in a plan file.</strong> The desired and observed state of each cluster lives in a store the control plane owns. IaC tools are used only for the layer beneath (accounts, networks, cell scaffolding).</li>
+  <li><strong>Operations are workflows, not scripts.</strong> A patch is a durable, resumable, observable state machine with checkpoints, not a playbook run that you hope finishes.</li>
+  <li><strong>Hosts are cattle where the engine allows it.</strong> Replace from an image, then let the engine rebalance. Where data lives on local NVMe, replacement has a data-movement cost, so the platform must know when in-place patching with a reboot is the cheaper path.</li>
+  <li><strong>The data plane never needs the control plane to keep serving.</strong> Node agents act on local state, and an outage of the control plane pauses change but not traffic.</li>
+</ul>
+
+<h2 id="principles">Design principles</h2>
+<ol class="plain">
+  <li><strong>Declare, don't script.</strong> Users state what they want (version, size, racks, policy). The platform converges.</li>
+  <li><strong>The engine knows its own rules.</strong> Quorum, replication, and migration rules belong to the engine pack. The core never hard-codes them.</li>
+  <li><strong>Every change is gated by health.</strong> No step proceeds until the engine says it is safe, and no failure proceeds silently.</li>
+  <li><strong>Operations are durable and idempotent.</strong> Any step can be retried, paused, or taken over by a human.</li>
+  <li><strong>The core stays small.</strong> A new engine should need a pack, not a core change.</li>
+  <li><strong>Control, not lock-in.</strong> Anything the platform sets can be overridden by an authorised user, with the override recorded.</li>
+</ol>
+
+<h2 id="constructs">Foundational constructs</h2>
+<p>These are engine-agnostic. They exist once, and every pack uses them.</p>
+<div class="scroll"><table>
+<thead><tr><th>Construct</th><th>Responsibility</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Resource model</td><td>Typed objects: <code>Cluster</code>, <code>NodeGroup</code>, <code>Node</code>, <code>Operation</code>, <code>MaintenancePolicy</code>, <code>BackupPolicy</code>, <code>Cell</code>. Each has <code>spec</code> (desired) and <code>status</code> (observed).</td><td>Versioned API with a schema per engine. The shape that Kubernetes made familiar, whether or not Kubernetes is the host.</td></tr>
+<tr><td>Spec and status store</td><td>Source of truth for desired and observed state, with history.</td><td>Transactional store. An audit-grade change log comes with it.</td></tr>
+<tr><td>Reconciler</td><td>Compares spec and status and starts operations to close the gap. Handles drift, repair, and scale.</td><td>Level-triggered, so a missed event is corrected on the next pass.</td></tr>
+<tr><td>Workflow engine</td><td>Runs multi-step operations durably: patch, upgrade, replace, scale, restore.</td><td>Needs retries, timers, signals (pause, approve), and resume after a crash. A durable-execution engine fits.</td></tr>
+<tr><td>Rollout engine</td><td>Plans waves, enforces disruption budgets, applies canary-first ordering, and halts or rolls back on gate failure.</td><td>Takes topology and limits from the pack. Owns the "how fast, how many at once" decision.</td></tr>
+<tr><td>Health signals</td><td>Normalises probes and metrics into a small set of states: <em>healthy, degraded, unsafe-to-disturb, down</em>.</td><td>Reads Prometheus and engine probes. The pack defines the queries.</td></tr>
+<tr><td>Remediation engine</td><td>Maps detected conditions to safe actions, with a trust level per action: observe, suggest, auto-with-limits, auto.</td><td>Starts in suggest mode, graduates per rule.</td></tr>
+<tr><td>Backup and DR service</td><td>Schedules backups, verifies them by restore, and orchestrates cross-cluster failover and failback.</td><td>The pack supplies the engine driver. The core owns schedule, retention, and test restores.</td></tr>
+<tr><td>Fleet inventory</td><td>Version, patch level, image, owner, cost, and compliance state for every node and cluster.</td><td>This is what Security queries instead of asking an SRE.</td></tr>
+<tr><td>Policy, identity, audit</td><td>Who may do what, maintenance windows, version allow-lists, approval rules, and an immutable record of every action.</td><td>Policy as code. Overrides require a reason.</td></tr>
+<tr><td>Self-service API</td><td>One API behind a CLI, a UI, and a Git-based path.</td><td>Application teams request and change clusters within policy.</td></tr>
+<tr><td>Substrate adapter</td><td>Creates and replaces compute, disks, and network on Azure, AWS, or Kubernetes.</td><td>Thin interface. Pulumi or Terraform can sit behind it for substrate resources only.</td></tr>
+<tr><td>Node agent</td><td>Small daemon on each node: runs local steps, reports health, keeps working if the control plane is away.</td><td>Replaces most Ansible-over-SSH usage.</td></tr>
+</tbody></table></div>
+
+<h2 id="architecture">Reference architecture</h2>
+<figure>
+<div class="scroll">
+<svg viewBox="0 0 860 470" role="img" aria-label="A central control plane with spec store, reconciler, workflow engine, rollout engine, remediation, and inventory; engine packs plugged in beside it; and per-cloud cells containing node agents and database clusters.">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker>
+  </defs>
+  <!-- control plane -->
+  <rect x="20" y="16" width="560" height="214" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="36" y="40" font-size="13" font-weight="700">CONTROL PLANE (one per environment)</text>
+  <rect x="36" y="54" width="120" height="42" rx="6" fill="none" stroke="currentColor"/><text x="96" y="79" font-size="12" text-anchor="middle">API + policy</text>
+  <rect x="170" y="54" width="120" height="42" rx="6" fill="none" stroke="currentColor"/><text x="230" y="79" font-size="12" text-anchor="middle">Spec + status store</text>
+  <rect x="304" y="54" width="120" height="42" rx="6" fill="none" stroke="currentColor"/><text x="364" y="79" font-size="12" text-anchor="middle">Reconciler</text>
+  <rect x="438" y="54" width="124" height="42" rx="6" fill="none" stroke="currentColor"/><text x="500" y="79" font-size="12" text-anchor="middle">Fleet inventory</text>
+  <rect x="36" y="124" width="120" height="42" rx="6" fill="none" stroke="currentColor"/><text x="96" y="149" font-size="12" text-anchor="middle">Workflow engine</text>
+  <rect x="170" y="124" width="120" height="42" rx="6" fill="none" stroke="currentColor"/><text x="230" y="149" font-size="12" text-anchor="middle">Rollout engine</text>
+  <rect x="304" y="124" width="120" height="42" rx="6" fill="none" stroke="currentColor"/><text x="364" y="149" font-size="12" text-anchor="middle">Remediation</text>
+  <rect x="438" y="124" width="124" height="42" rx="6" fill="none" stroke="currentColor"/><text x="500" y="149" font-size="12" text-anchor="middle">Backup + DR</text>
+  <text x="36" y="206" font-size="12" opacity=".8">Desired state in, operations out. Never on the data path.</text>
+  <!-- packs -->
+  <rect x="610" y="16" width="230" height="214" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+  <text x="626" y="40" font-size="13" font-weight="700">ENGINE PACKS (plugins)</text>
+  <rect x="626" y="54" width="198" height="40" rx="6" fill="var(--surface)" stroke="currentColor"/><text x="725" y="78" font-size="12" text-anchor="middle">aerospike</text>
+  <rect x="626" y="104" width="198" height="40" rx="6" fill="var(--surface)" stroke="currentColor"/><text x="725" y="128" font-size="12" text-anchor="middle">foundationdb</text>
+  <rect x="626" y="154" width="198" height="40" rx="6" fill="var(--surface)" stroke="currentColor" stroke-dasharray="5 4"/><text x="725" y="178" font-size="12" text-anchor="middle">next engine</text>
+  <text x="626" y="214" font-size="11" opacity=".8">schema, topology, probes, operations</text>
+  <line x1="580" y1="120" x2="608" y2="120" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)" marker-start="url(#arr)"/>
+  <!-- arrows down -->
+  <line x1="190" y1="230" x2="190" y2="278" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="200" y="258" font-size="12">operations, desired state</text>
+  <line x1="470" y1="278" x2="470" y2="230" stroke="currentColor" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="480" y="258" font-size="12">status, health, events</text>
+  <!-- cells -->
+  <rect x="20" y="280" width="410" height="170" rx="10" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="36" y="304" font-size="13" font-weight="700">CELL: AWS region</text>
+  <rect x="36" y="318" width="378" height="34" rx="6" fill="none" stroke="currentColor"/><text x="225" y="340" font-size="12" text-anchor="middle">Substrate adapter + image registry</text>
+  <rect x="36" y="362" width="178" height="74" rx="6" fill="none" stroke="currentColor"/>
+  <text x="125" y="384" font-size="12" text-anchor="middle" font-weight="600">Aerospike cluster</text><text x="125" y="403" font-size="11" text-anchor="middle">racks A B C, node agents</text><text x="125" y="420" font-size="11" text-anchor="middle">Prometheus exporter</text>
+  <rect x="236" y="362" width="178" height="74" rx="6" fill="none" stroke="currentColor"/>
+  <text x="325" y="384" font-size="12" text-anchor="middle" font-weight="600">FoundationDB cluster</text><text x="325" y="403" font-size="11" text-anchor="middle">zones 1 2 3, node agents</text><text x="325" y="420" font-size="11" text-anchor="middle">Prometheus exporter</text>
+  <rect x="450" y="280" width="390" height="170" rx="10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="6 4"/>
+  <text x="466" y="304" font-size="13" font-weight="700">CELL: Azure region (same shape)</text>
+  <text x="466" y="340" font-size="12">Each cell runs on last known state if the</text>
+  <text x="466" y="358" font-size="12">control plane is unreachable. Change pauses,</text>
+  <text x="466" y="376" font-size="12">serving does not.</text>
+  <text x="466" y="412" font-size="12" opacity=".85">New region or cloud = new cell, same packs.</text>
+</svg>
+</div>
+<figcaption>The control plane handles intent and orchestration. Packs describe each engine. Cells hold the clusters and keep serving without the control plane.</figcaption>
+</figure>
+
+<h2 id="pack">The engine pack: the plugin unit</h2>
+<p>A pack is a versioned bundle that tells the core everything engine-specific. The goal is that adding an engine means writing a pack and reviewing it, not changing the core.</p>
+
+<div class="scroll"><table>
+<thead><tr><th>Section</th><th>Declares</th><th>Form</th></tr></thead>
+<tbody>
+<tr><td>Spec schema</td><td>The fields a user may set, their defaults, limits, and which changes are safe live.</td><td><span class="badge b-doc">Declarative</span> JSON Schema</td></tr>
+<tr><td>Image recipe</td><td>How to build the node image: OS, engine binaries, exporters, agent, hardening.</td><td><span class="badge b-doc">Declarative</span> plus build script</td></tr>
+<tr><td>Config templates</td><td>Engine config files rendered from the spec.</td><td><span class="badge b-doc">Declarative</span> templates</td></tr>
+<tr><td>Topology model</td><td>The failure-domain unit (rack, zone), how it maps to cloud zones, and the maximum units that may be down at once for a given replication setting.</td><td><span class="badge b-doc">Declarative</span> rules</td></tr>
+<tr><td>Observation</td><td>Probes and metric queries that define healthy, degraded, and unsafe-to-disturb.</td><td><span class="badge b-doc">Declarative</span> queries</td></tr>
+<tr><td>Operation graphs</td><td>Ordered steps for patch, upgrade, replace, scale, and restore, built from core primitives.</td><td><span class="badge b-doc">Declarative</span> DAG</td></tr>
+<tr><td>Compatibility matrix</td><td>Allowed upgrade paths, minimum versions, client-library requirements.</td><td><span class="badge b-doc">Declarative</span> table</td></tr>
+<tr><td>Alert mappings</td><td>Condition to remediation action, with trust level.</td><td><span class="badge b-doc">Declarative</span> rules</td></tr>
+<tr><td>Backup driver</td><td>How to take, catalogue, and restore a backup for this engine.</td><td><span class="badge b-inf">Adapter code</span></td></tr>
+<tr><td>Engine adapter</td><td>Commands the engine needs that no primitive covers: quiesce, exclude, set roster, read a custom statistic.</td><td><span class="badge b-inf">Adapter code</span> behind a fixed gRPC contract</td></tr>
+</tbody></table></div>
+
+<h3>Core primitives that operation graphs are built from</h3>
+<p><code>preflight</code>, <code>wait-until</code> (a probe condition with a timeout), <code>drain</code>, <code>set-param</code>, <code>stop</code>, <code>start</code>, <code>apply-image</code> or <code>patch-in-place</code>, <code>reboot</code>, <code>replace-node</code>, <code>verify</code>, <code>checkpoint</code>, and <code>approve</code>. Because every engine's patch is a different ordering of the same primitives plus a few engine adapter calls, most of a new pack is data.</p>
+
+<h3>What a pack looks like</h3>
+<p>An abbreviated Aerospike example. Field names are illustrative, not a final schema.</p>
+<pre><code>kind: EnginePack
+name: aerospike
+version: 0.1.0
+topology:
+  unit: rack
+  map: cloud.zone
+  disruption:
+    maxUnitsDown: "1 rack"
+    require: "replication_factor &lt;= rack_count"
+observe:
+  safe_to_disturb:
+    - asinfo: cluster-stable == true
+    - metric: cluster_size == spec.nodes
+    - metric: migrate_partitions_remaining == 0
+operations:
+  patch-node:
+    steps:
+      - preflight
+      - adapter: set-migrate-fill-delay
+      - adapter: quiesce
+      - stop
+      - patch-in-place
+      - reboot
+      - start
+      - wait-until: cluster_size == spec.nodes
+      - wait-until: safe_to_disturb
+      - verify
+upgrade_matrix: ./upgrade-paths.yaml
+alerts: ./alert-rules.yaml
+adapter: grpc://aerospike-adapter</code></pre>
+
+<h3>Keeping packs safe</h3>
+<ul>
+  <li>Adapter code runs sandboxed (a separate process or WASM module) with only the permissions the pack declares.</li>
+  <li>Packs are signed, versioned, and pinned per cluster, so upgrading a pack is itself a gated change.</li>
+  <li>A pack test harness runs every operation against a throwaway cluster before a pack is accepted.</li>
+</ul>
+
+<h2 id="engines">Aerospike and FoundationDB constraints</h2>
+<p>These live inside each pack, not in the core. The table shows the same concerns resolved differently, which is the reason for the pack boundary.</p>
+<div class="scroll"><table>
+<thead><tr><th>Concern</th><th>Aerospike</th><th>FoundationDB</th><th>Lives in</th></tr></thead>
+<tbody>
+<tr><td>Failure-domain unit</td><td>Rack (rack-aware clusters). With replication factor at most the rack count, each rack can hold a full copy, which is what allows a whole rack to be taken down together.</td><td>Fault domain (zone, machine) as configured in locality. Redundancy mode (for example <code>triple</code>) sets how many can fail.</td><td>Topology model</td></tr>
+<tr><td>Before stopping a node</td><td>Quiesce the node so it hands off master ownership at the next rebalance. Set <code>migrate-fill-delay</code> on every node above the expected maintenance time to avoid needless data movement.</td><td>For permanent removal, exclude the process so data moves off first. For a restart, no exclusion is needed if redundancy allows. <span class="badge b-ver">Verify</span></td><td>Adapter</td></tr>
+<tr><td>What "safe for the next node" means</td><td>Cluster key uniform and cluster size as expected, or the cluster-stable check on newer versions. Migrations must complete first if any namespace is in-memory only, and always for replication factor 1. If every namespace is persisted, the docs say the next node can proceed without losing data.</td><td>Database available, no data movement in flight beyond a threshold, and replication healthy as reported by cluster status. <span class="badge b-ver">Verify</span></td><td>Observation</td></tr>
+<tr><td>Strong consistency mode</td><td>Needs a roster. Dead or unavailable partitions must be resolved by a person before restarts continue. SC cannot be switched on or off for a running cluster, and all racks must share identical SC namespaces.</td><td>Not applicable. Transactions are always serialisable.</td><td>Operation graph (gate), spec schema</td></tr>
+<tr><td>Version upgrade compatibility</td><td>Rolling, node by node, within documented upgrade paths. The Kubernetes operator also supports batch upgrades within a rack.</td><td>Patch releases of the same minor version are protocol-compatible. Different minor versions are not, so all server processes must move together, and clients need a compatible library.</td><td>Compatibility matrix</td></tr>
+<tr><td>Client coordination</td><td>Client library compatibility with server version.</td><td>Hard requirement. Clients need a matching library before the server cuts over. The platform should record which applications use which client versions.</td><td>Compatibility matrix, inventory</td></tr>
+<tr><td>Special roles</td><td>Namespaces, storage engine per namespace (memory, device), rack assignment.</td><td>Process classes (storage, log, stateless), and coordinators, which have their own safe-change rules. <span class="badge b-ver">Verify</span></td><td>Spec schema, operation graph</td></tr>
+<tr><td>Local NVMe</td><td>Persisted data survives an in-place reboot. Replacing the VM loses the local disk and forces full re-replication, so patch-in-place plus reboot is usually cheaper. <span class="badge b-ver">Verify per instance type</span></td><td>Same principle. Replacing a storage process means redistribution through the cluster.</td><td>Operation graph (choose in-place or replace)</td></tr>
+<tr><td>Replication and DR</td><td>XDR is asynchronous replication between clusters, scoped by namespace, set, or bin. Restore into an active-active XDR setup needs XDR disabled first.</td><td>Native cross-region configuration and backup agent, using the engine's own tooling. <span class="badge b-ver">Verify</span></td><td>Backup driver</td></tr>
+<tr><td>Existing operator</td><td>Aerospike Kubernetes Operator, Kubernetes only.</td><td>FoundationDB Kubernetes operator, Kubernetes only, one FDB version per operator image.</td><td>Substrate choice (see below)</td></tr>
+</tbody></table></div>
+<div class="callout"><p><strong>How I marked confidence</strong></p><p>Aerospike rows come from Aerospike's published upgrade, quiesce, strong-consistency, and operator documentation. FoundationDB protocol and client rules come from the FoundationDB upgrade wiki. Rows marked <span class="badge b-ver">Verify</span> reflect general FoundationDB knowledge that I did not confirm against current documentation. The first engineering task for each pack is to turn every Verify item into a tested step.</p></div>
+
+<h2 id="patching">Patching, redesigned</h2>
+<p>Here is how the same fleet behaves with the platform. Units below are abstract: one unit is the time to patch one node and reach a safe state. Actual times depend on your migration speed, which you still need to measure.</p>
+
+<p>Example: a 25-node cluster across 5 racks of 5 nodes. Today it takes 25 units, one node at a time. With rack waves it takes 5 units, and a canary cluster goes first.</p>
+<figure>
+<div class="scroll" style="padding:14px">
+  <div class="barlabel">Serial, 25 units</div>
+  <div class="bar" style="min-width:600px"><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span></div>
+  <div class="barlabel">Five rack waves, 5 units (illustrative)</div>
+  <div class="bar wave" style="min-width:600px"><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span><span style="width:24px"></span></div>
+</div>
+<figcaption>Illustrative only. The saving depends on racks being balanced and replication factor fitting the rack count. Each wave still waits for its health gate before the next starts.</figcaption>
+</figure>
+
+<h3>The rollout, step by step</h3>
+<ol class="plain">
+  <li><strong>Plan.</strong> The rollout engine reads the cluster's topology and the pack's disruption rules, and builds waves. A cluster that cannot safely lose a whole rack falls back to smaller waves, down to one node.</li>
+  <li><strong>Canary.</strong> A low-risk cluster of the same engine and version goes first. The fleet waits on its result.</li>
+  <li><strong>Per wave.</strong> Preflight gate, engine-specific drain (for example quiesce), patch (in place or from image), reboot, rejoin, safe-to-disturb gate.</li>
+  <li><strong>Stop rules.</strong> A failed gate pauses the rollout and pages a human with the full state. Nothing continues on its own after a failure.</li>
+  <li><strong>Record.</strong> Inventory is updated per node. Security's question, "is every node patched?", is a query.</li>
+</ol>
+
+<h3>In place or replace</h3>
+<p>Choose per engine and per storage type. With local NVMe, patching in place and rebooting keeps the data, so the engine avoids re-replicating everything. Replace-from-image gives clean hosts and no drift but costs a full data copy each time. The platform should support both, default to the cheaper one per pack, and use replace for base-image changes and for nodes that fail a health check after patching.</p>
+
+<h2 id="substrate">VMs or Kubernetes</h2>
+<p>Treat these as two separate decisions: where the <em>control plane</em> runs, and where the <em>data plane</em> runs.</p>
+<div class="scroll"><table>
+<thead><tr><th>Option</th><th>What you get</th><th>Cost</th></tr></thead>
+<tbody>
+<tr><td>Data on VMs, custom control plane</td><td>Full control, no change for the database teams, local NVMe used as today. Works the same on Azure and AWS through the substrate adapter.</td><td>You build orchestration, node agent, and the engine adapters. The largest build.</td></tr>
+<tr><td>Data on VMs, Kubernetes API as control plane</td><td>Use custom resources for the spec and status model, and controllers for reconciliation, in a small management cluster. Data stays on VMs, as Cluster API does for machines. You get API machinery, RBAC, and tooling for free.</td><td>Operational weight of a management cluster. Long operations still need a workflow engine alongside controllers.</td></tr>
+<tr><td>Data on Kubernetes, vendor operators</td><td>Aerospike and FoundationDB both have Kubernetes operators that handle rolling logic. Fastest path if the engines run well on your Kubernetes nodes with local NVMe.</td><td>Operators cover one engine each and have different models, which fights your goal of a single plugin ecosystem. Aerospike's management tooling cost may remain.</td></tr>
+</tbody></table></div>
+<p><strong>Recommendation.</strong> Design the core so the substrate is an adapter, as shown in the architecture. Start with VMs, since that is where you are. Keep Kubernetes as a second substrate, and use the vendor operators as reference material for the packs, because they encode the engines' rules. Choose between a custom state store and a Kubernetes-API-based one early, because the resource model is the hardest piece to change later.</p>
+
+<h2 id="roadmap">Build order</h2>
+<ol class="plain">
+  <li><strong>Baseline and quick wins.</strong> Measure migration time per node, patch time, and SRE hours. Put rack-wave and canary logic around the current Ansible steps. This gives patching relief while the platform is built.</li>
+  <li><strong>Core skeleton with Aerospike.</strong> Resource model, store, workflow engine, rollout engine, node agent, and the first pack. Cover create, patch, upgrade, replace, and scale. Retire the 30-minute manual configuration step by generating it from a spec.</li>
+  <li><strong>Health, inventory, and remediation in suggest mode.</strong> Gate everything on probes. Publish fleet patch compliance. Auto-remediation begins as suggestions, and each rule earns automation.</li>
+  <li><strong>FoundationDB pack.</strong> This is the test of the abstraction. Every place the core needed a change is a defect in the contract. Fix the contract, then freeze it.</li>
+  <li><strong>Backup, DR, and self-service.</strong> Verified restores, cross-cluster failover drills, and a request path for application teams.</li>
+  <li><strong>Open the plugin interface.</strong> Pack authoring guide, test harness, and signing. Add a third engine through a pack only.</li>
+</ol>
+
+<h2 id="risks">Risks and unknowns</h2>
+<ul>
+  <li><strong>Platform sprawl.</strong> A custom control plane is a product. Keep the core small, adopt a workflow engine instead of writing one, and measure SRE hours against the build.</li>
+  <li><strong>Pack contract too thin or too wide.</strong> Two engines is a small sample. Expect to revise the contract once, after FoundationDB.</li>
+  <li><strong>Automation can amplify mistakes.</strong> Hard stop on failed gates, disruption budgets enforced centrally, and trust levels per remediation rule.</li>
+  <li><strong>Data movement time.</strong> It sets the floor for patch time. I have no figure for your migration speed.</li>
+  <li><strong>Unverified engine facts.</strong> Items marked Verify must be tested against your versions.</li>
+  <li><strong>Aerospike licensing.</strong> The management software cost is your motivation, but vendor support terms may constrain what you can automate. Check before committing.</li>
+  <li><strong>Public hyperscaler detail is thin.</strong> The Ansible and IaC answers above are inference. A conversation with someone who has worked on a managed service would test them.</li>
+</ul>
+
+<footer id="sources">
+<h2 style="margin-top:0;font-size:20px">Sources</h2>
+<ul>
+  <li><a href="https://docs.aws.amazon.com/wellarchitected/latest/reducing-scope-of-impact-with-cell-based-architecture/control-plane-and-data-plane.html">AWS: Control plane and data plane (cell-based architecture)</a></li>
+  <li><a href="https://docs.aws.amazon.com/whitepapers/latest/aws-fault-isolation-boundaries/static-stability.html">AWS: Static stability, Fault Isolation Boundaries</a></li>
+  <li><a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_UpgradeDBInstance.MySQL.html">AWS: Upgrades of the RDS for MySQL DB engine</a></li>
+  <li><a href="https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/blue-green-deployments-overview.html">AWS: Overview of RDS Blue/Green Deployments</a></li>
+  <li><a href="https://sqlbits.com/sessions/event2026/Architecting_the_Cloud_How_We_Build_a_SQL_Server_PaaS_at_Scale">SQLBits: How We Build a SQL Server PaaS at Scale</a> (session abstract)</li>
+  <li><a href="https://petri.com/?p=89864">Petri: Is Azure SQL Highly Available?</a> (secondary source)</li>
+  <li><a href="https://learn.microsoft.com/uk-ua/azure/service-fabric/how-to-managed-cluster-upgrades">Microsoft: Service Fabric managed cluster upgrades</a></li>
+  <li><a href="https://aerospike.com/docs/server/operations/upgrade/aerospike">Aerospike: Upgrading Aerospike</a></li>
+  <li><a href="https://aerospike.com/docs/database/manage/cluster/quiesce-node/">Aerospike: Quiesce node</a></li>
+  <li><a href="https://aerospike.com/docs/kubernetes/4.3.0/manage/configure/strong-consistency">Aerospike Kubernetes Operator: Strong consistency</a></li>
+  <li><a href="https://aerospike.com/docs/cloud/kubernetes/operator/2.4.0/release-notes">Aerospike Kubernetes Operator 2.4.0 release notes</a></li>
+  <li><a href="https://aerospike.com/docs/architecture/xdr">Aerospike: Cross-Datacenter Replication (XDR) architecture</a></li>
+  <li><a href="https://GitHub.com/apple/foundationdb/wiki/Upgrading-FoundationDB">FoundationDB: Upgrading FoundationDB</a></li>
+  <li><a href="https://github.com/FoundationDB/fdb-kubernetes-operator/blob/v1.38.0/docs/compatibility.md">FoundationDB Kubernetes operator: compatibility (v1.38.0)</a></li>
+</ul>
+</footer>
+</main>
+</div>
